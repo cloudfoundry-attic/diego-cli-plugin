@@ -11,9 +11,8 @@ import (
 )
 
 type DiegoSupport interface {
-	SetDiegoFlag(string, bool) error
-	HasDiegoEnabled(string) (bool, error)
-	GetAppGuid(string) (string, error)
+	SetDiegoFlag(string, bool) ([]string, error)
+	HasDiegoEnabled(string) (bool, error, []string)
 }
 
 type diegoSupport struct {
@@ -30,41 +29,27 @@ func NewDiegoSupport(cli plugin.CliConnection) DiegoSupport {
 	}
 }
 
-func (d *diegoSupport) SetDiegoFlag(appGuid string, enable bool) error {
-	_, err := d.cli.CliCommandWithoutTerminalOutput("curl", "/v2/apps/"+appGuid, "-X", "PUT", "-d", `{"diego":`+strconv.FormatBool(enable)+`}`)
-	return err
+func (d *diegoSupport) SetDiegoFlag(appGuid string, enable bool) ([]string, error) {
+	return d.cli.CliCommandWithoutTerminalOutput("curl", "/v2/apps/"+appGuid, "-X", "PUT", "-d", `{"diego":`+strconv.FormatBool(enable)+`}`)
 }
 
-func (d *diegoSupport) HasDiegoEnabled(appGuid string) (bool, error) {
+func (d *diegoSupport) HasDiegoEnabled(appGuid string) (bool, error, []string) {
 
 	result, err := d.cli.CliCommandWithoutTerminalOutput("curl", "/v2/apps/"+appGuid+"/summary")
 	if err != nil {
-		return false, err
+		return false, err, result
 	}
 
 	if !strings.Contains(result[0], `"diego": `) {
-		return false, errors.New(fmt.Sprintf("%s\nJSON:\n%v\n\n", "'diego' flag is not found in json response", result))
+		return false, errors.New(fmt.Sprintf("%s\nJSON:\n", "'diego' flag is not found in json response")), result
 	}
 
 	b := []byte(result[0])
 	summary := AppSummary{}
 	err = json.Unmarshal(b, &summary)
 	if err != nil {
-		return false, err
+		return false, err, result
 	}
 
-	return summary.Diego, nil
-}
-
-func (d *diegoSupport) GetAppGuid(appName string) (string, error) {
-	result, err := d.cli.CliCommandWithoutTerminalOutput("app", appName, "--guid")
-	if err != nil {
-		if strings.Contains(result[0], "FAILED") {
-			return "", errors.New("App " + appName + " not found.")
-		}
-
-		return "", err
-	}
-
-	return strings.TrimSpace(result[0]), nil
+	return summary.Diego, nil, []string{}
 }
