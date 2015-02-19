@@ -50,6 +50,14 @@ func (c *DiegoBeta) GetMetadata() plugin.PluginMetadata {
 				},
 			},
 			{
+				Name:     "set-health-check",
+				HelpText: "set health_check_type flag to either port or none",
+				UsageDetails: plugin.Usage{
+					Usage: `cf set-health-check APP_NAME port /
+ cf set-health-check APP_NAME none`,
+				},
+			},
+			{
 				Name:     "docker-push",
 				HelpText: "push a docker image from docker hub as an app",
 				UsageDetails: plugin.Usage{
@@ -75,6 +83,8 @@ func (c *DiegoBeta) Run(cliConnection plugin.CliConnection, args []string) {
 		c.checkDiegoSupport(false, cliConnection, args[1])
 	} else if args[0] == "docker-push" && len(args) == 3 {
 		c.dockerPush(cliConnection, args)
+	} else if args[0] == "set-health-check" && len(args) == 3 && (args[2] == "port" || args[2] == "none") {
+		c.setHealthCheck(cliConnection, args[1], args[2])
 	} else {
 		c.showUsage(args)
 	}
@@ -97,9 +107,7 @@ func (c *DiegoBeta) toggleDiegoSupport(on bool, cliConnection plugin.CliConnecti
 		exitWithError(err, output)
 	}
 
-	output, err = d.SetDiegoFlag(appGuid, on)
-
-	if err != nil {
+	if output, err = d.SetDiegoFlag(appGuid, on); err != nil {
 		exitWithError(err, output)
 	}
 
@@ -109,19 +117,17 @@ func (c *DiegoBeta) toggleDiegoSupport(on bool, cliConnection plugin.CliConnecti
 func (c *DiegoBeta) checkDiegoSupport(checkEnable bool, cliConnection plugin.CliConnection, appName string) {
 	var err error
 	var output []string
+	var appGuid string
 
 	d := diego_support.NewDiegoSupport(cliConnection)
 	u := utils.NewUtils(cliConnection)
 
-	appGuid, err, output := u.GetAppGuid(appName)
-	if err != nil {
+	if appGuid, err, output = u.GetAppGuid(appName); err != nil {
 		exitWithError(err, output)
 	}
 
 	var result bool
-	result, err, output = d.HasDiegoEnabled(appGuid)
-
-	if err != nil {
+	if result, err, output = d.HasDiegoEnabled(appGuid); err != nil {
 		exitWithError(err, output)
 	}
 
@@ -129,14 +135,16 @@ func (c *DiegoBeta) checkDiegoSupport(checkEnable bool, cliConnection plugin.Cli
 }
 
 func (c *DiegoBeta) dockerPush(cliConnection plugin.CliConnection, args []string) {
+	var err error
+	var space, spaceGuid string
+	var output []string
+
 	u := utils.NewUtils(cliConnection)
-	space, err, output := u.GetTargetSpace()
-	if err != nil {
+	if space, err, output = u.GetTargetSpace(); err != nil {
 		exitWithError(err, output)
 	}
 
-	spaceGuid, err, output := u.GetSpaceGuid(space)
-	if err != nil {
+	if spaceGuid, err, output = u.GetSpaceGuid(space); err != nil {
 		exitWithError(err, output)
 	}
 
@@ -146,39 +154,50 @@ func (c *DiegoBeta) dockerPush(cliConnection plugin.CliConnection, args []string
 	d := docker.NewDocker(cliConnection)
 
 	fmt.Println("Creating app", appName, "...")
-	output, err = d.CreateApp(appName, dockerImg, spaceGuid)
-	if err != nil {
+	if output, err = d.CreateApp(appName, dockerImg, spaceGuid); err != nil {
 		exitWithError(err, output)
 	}
 	sayOk()
 
+	var domain string
 	fmt.Println("Creating route for", appName, "...")
-	domain, err, output := u.FindDomain()
-	if err != nil {
+	if domain, err, output = u.FindDomain(); err != nil {
 		exitWithError(err, output)
 	}
 	sayOk()
 
-	output, err = u.CreateRoute(space, domain, appName)
-	if err != nil {
+	if output, err = u.CreateRoute(space, domain, appName); err != nil {
 		exitWithError(err, output)
 	}
 	fmt.Println("Route " + appName + "." + domain + " created")
 	sayOk()
 
 	fmt.Println("Mapping route to", appName, "...")
-	output, err = u.MapRoute(appName, domain, appName)
-	if err != nil {
+	if output, err = u.MapRoute(appName, domain, appName); err != nil {
 		exitWithError(err, output)
 	}
 	fmt.Println("Mapped " + appName + "." + domain + " route to " + appName)
 	sayOk()
 
 	fmt.Println("Start app", appName, "...")
-	output, err = u.StartApp(appName)
+	if output, err = u.StartApp(appName); err != nil {
+		exitWithError(err, output)
+	}
+}
+
+func (c *DiegoBeta) setHealthCheck(cliConnection plugin.CliConnection, appName string, value string) {
+	u := utils.NewUtils(cliConnection)
+
+	appGuid, err, output := u.GetAppGuid(appName)
 	if err != nil {
 		exitWithError(err, output)
 	}
+
+	fmt.Println("Setting health_check_type for " + appName + " to '" + value + "'")
+	if output, err = u.SetHealthCheck(appGuid, value); err != nil {
+		exitWithError(err, output)
+	}
+	sayOk()
 }
 
 func exitWithError(err error, output []string) {

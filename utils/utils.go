@@ -15,6 +15,7 @@ type Utils interface {
 	StartApp(string) ([]string, error)
 	CreateRoute(string, string, string) ([]string, error)
 	MapRoute(string, string, string) ([]string, error)
+	SetHealthCheck(string, string) ([]string, error)
 }
 
 type utils struct {
@@ -97,4 +98,8 @@ func (u *utils) MapRoute(appName, domain, host string) ([]string, error) {
 
 func (u *utils) StartApp(appName string) ([]string, error) {
 	return u.cli.CliCommand("start", appName)
+}
+
+func (u *utils) SetHealthCheck(appGuid, value string) ([]string, error) {
+	return u.cli.CliCommandWithoutTerminalOutput("curl", "/v2/apps/"+appGuid, "-X", "PUT", "-d", `{"health_check_type":`+value+`}`)
 }
