@@ -1,21 +1,27 @@
 package diego_support
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
+	"strconv"
 	"strings"
 
 	"github.com/cloudfoundry/cli/plugin"
 )
 
 type DiegoSupport interface {
-	EnableDiego(string) error
-	DisableDiego(string) error
+	SetDiegoFlag(string, bool) error
+	HasDiegoEnabled(string) (bool, error)
+	GetAppGuid(string) (string, error)
 }
 
 type diegoSupport struct {
 	cli plugin.CliConnection
+}
+
+type AppSummary struct {
+	Diego bool `json:"diego"`
 }
 
 func NewDiegoSupport(cli plugin.CliConnection) DiegoSupport {
@@ -24,30 +30,33 @@ func NewDiegoSupport(cli plugin.CliConnection) DiegoSupport {
 	}
 }
 
-func (d *diegoSupport) EnableDiego(app string) error {
-	appGuid, err := d.getAppGuid(app)
-	if err != nil {
-
-		fmt.Println("Error: ", err)
-		os.Exit(1)
-	}
-
-	_, err = d.cli.CliCommandWithoutTerminalOutput("curl", "/v2/apps/"+appGuid, "-X", "PUT", "-d", `{"diego":true}`)
+func (d *diegoSupport) SetDiegoFlag(appGuid string, enable bool) error {
+	_, err := d.cli.CliCommandWithoutTerminalOutput("curl", "/v2/apps/"+appGuid, "-X", "PUT", "-d", `{"diego":`+strconv.FormatBool(enable)+`}`)
 	return err
 }
 
-func (d *diegoSupport) DisableDiego(app string) error {
-	appGuid, err := d.getAppGuid(app)
+func (d *diegoSupport) HasDiegoEnabled(appGuid string) (bool, error) {
+
+	result, err := d.cli.CliCommandWithoutTerminalOutput("curl", "/v2/apps/"+appGuid+"/summary")
 	if err != nil {
-		fmt.Println("Error: ", err)
-		os.Exit(1)
+		return false, err
 	}
 
-	_, err = d.cli.CliCommandWithoutTerminalOutput("curl", "/v2/apps/"+appGuid, "-X", "PUT", "-d", `{"diego":false}`)
-	return err
+	if !strings.Contains(result[0], `"diego": `) {
+		return false, errors.New(fmt.Sprintf("%s\nJSON:\n%v\n\n", "'diego' flag is not found in json response", result))
+	}
+
+	b := []byte(result[0])
+	summary := AppSummary{}
+	err = json.Unmarshal(b, &summary)
+	if err != nil {
+		return false, err
+	}
+
+	return summary.Diego, nil
 }
 
-func (d *diegoSupport) getAppGuid(appName string) (string, error) {
+func (d *diegoSupport) GetAppGuid(appName string) (string, error) {
 	result, err := d.cli.CliCommandWithoutTerminalOutput("app", appName, "--guid")
 	if err != nil {
 		if strings.Contains(result[0], "FAILED") {
@@ -57,5 +66,5 @@ func (d *diegoSupport) getAppGuid(appName string) (string, error) {
 		return "", err
 	}
 
-	return result[0], nil
+	return strings.TrimSpace(result[0]), nil
 }
