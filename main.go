@@ -43,13 +43,6 @@ func (c *DiegoBeta) GetMetadata() plugin.PluginMetadata {
 				},
 			},
 			{
-				Name:     "has-diego-disabled",
-				HelpText: "Check if Diego support is disabled for an app",
-				UsageDetails: plugin.Usage{
-					Usage: "cf has-diego-disabled APP_NAME",
-				},
-			},
-			{
 				Name:     "set-health-check",
 				HelpText: "set health_check_type flag to either port or none",
 				UsageDetails: plugin.Usage{
@@ -72,6 +65,7 @@ func (c *DiegoBeta) GetMetadata() plugin.PluginMetadata {
 
 Options
 --no-start : Do not start an app after pushing
+--no-route : Do not map a route to this app and remove routes from previous pushes of this app
 `,
 				},
 			},
@@ -89,9 +83,7 @@ func (c *DiegoBeta) Run(cliConnection plugin.CliConnection, args []string) {
 	} else if args[0] == "disable-diego" && len(args) == 2 {
 		c.toggleDiegoSupport(false, cliConnection, args[1])
 	} else if args[0] == "has-diego-enabled" && len(args) == 2 {
-		c.checkDiegoSupport(true, cliConnection, args[1])
-	} else if args[0] == "has-diego-disabled" && len(args) == 2 {
-		c.checkDiegoSupport(false, cliConnection, args[1])
+		c.isDiegoEnabled(cliConnection, args[1])
 	} else if args[0] == "docker-push" && len(args) >= 3 {
 		c.dockerPush(cliConnection, args)
 	} else if args[0] == "set-health-check" && len(args) == 3 && (args[2] == "port" || args[2] == "none") {
@@ -127,7 +119,7 @@ func (c *DiegoBeta) toggleDiegoSupport(on bool, cliConnection plugin.CliConnecti
 	fmt.Printf("Diego support for %s is set to %t\n\n", appName, on)
 }
 
-func (c *DiegoBeta) checkDiegoSupport(checkEnable bool, cliConnection plugin.CliConnection, appName string) {
+func (c *DiegoBeta) isDiegoEnabled(cliConnection plugin.CliConnection, appName string) {
 	var err error
 	var output []string
 	var appGuid string
@@ -144,7 +136,7 @@ func (c *DiegoBeta) checkDiegoSupport(checkEnable bool, cliConnection plugin.Cli
 		exitWithError(err, output)
 	}
 
-	fmt.Println(checkEnable == result)
+	fmt.Println(result)
 }
 
 func (c *DiegoBeta) dockerPush(cliConnection plugin.CliConnection, args []string) {
@@ -166,25 +158,42 @@ func (c *DiegoBeta) dockerPush(cliConnection plugin.CliConnection, args []string
 
 	d := docker.NewDocker(cliConnection)
 
+	//creating app
 	fmt.Println("Creating app", appName, "...")
 	if output, err = d.CreateApp(appName, dockerImg, spaceGuid); err != nil {
 		exitWithError(err, output)
 	}
 	sayOk()
 
+	//creating route
 	var domain string
-	fmt.Println("Creating route for", appName, "...")
-	if domain, err, output = u.FindDomain(); err != nil {
-		exitWithError(err, output)
-	}
-	sayOk()
+	if isFlagExist(args[3:], "--no-route") {
+		fmt.Println("Removing app routes if any ...")
+		appGuid, err, output := u.GetAppGuid(appName)
+		if err != nil {
+			exitWithError(err, output)
+		}
 
-	if output, err = u.CreateRoute(space, domain, appName); err != nil {
-		exitWithError(err, output)
-	}
-	fmt.Println("Route " + appName + "." + domain + " created")
-	sayOk()
+		if output, err = u.DetachAppRoutes(appGuid); err != nil {
+			exitWithError(err, output)
+		}
+		sayOk()
+		return
+	} else {
+		fmt.Println("Creating route for", appName, "...")
+		if domain, err, output = u.FindDomain(); err != nil {
+			exitWithError(err, output)
+		}
+		sayOk()
 
+		if output, err = u.CreateRoute(space, domain, appName); err != nil {
+			exitWithError(err, output)
+		}
+		fmt.Println("Route " + appName + "." + domain + " created")
+		sayOk()
+	}
+
+	//mapping route
 	fmt.Println("Mapping route to", appName, "...")
 	if output, err = u.MapRoute(appName, domain, appName); err != nil {
 		exitWithError(err, output)
@@ -192,6 +201,7 @@ func (c *DiegoBeta) dockerPush(cliConnection plugin.CliConnection, args []string
 	fmt.Println("Mapped " + appName + "." + domain + " route to " + appName)
 	sayOk()
 
+	//starting app
 	if isFlagExist(args[3:], "--no-start") {
 		fmt.Println("Stop operation before starting '" + appName + "'")
 		sayOk()

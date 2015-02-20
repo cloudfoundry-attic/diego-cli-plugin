@@ -19,6 +19,7 @@ type Utils interface {
 	MapRoute(string, string, string) ([]string, error)
 	SetHealthCheck(string, string) ([]string, error)
 	GetHealthCheck(string) (string, []string, error)
+	DetachAppRoutes(string) ([]string, error)
 }
 
 type utils struct {
@@ -26,7 +27,11 @@ type utils struct {
 }
 
 type AppSummary struct {
-	HealthCheckType string `json:"health_check_type"`
+	HealthCheckType string  `json:"health_check_type"`
+	Routes          []Route `json:"routes"`
+}
+type Route struct {
+	Guid string `json:"guid,omitempty"`
 }
 
 func NewUtils(cli plugin.CliConnection) Utils {
@@ -129,4 +134,26 @@ func (u *utils) GetHealthCheck(appGuid string) (string, []string, error) {
 	}
 
 	return summary.HealthCheckType, []string{}, nil
+}
+
+func (u *utils) DetachAppRoutes(appGuid string) ([]string, error) {
+	output, err := u.cli.CliCommandWithoutTerminalOutput("curl", "/v2/apps/"+appGuid+"/summary")
+	if err != nil {
+		return output, err
+	}
+
+	b := []byte(output[0])
+	summary := AppSummary{}
+	err = json.Unmarshal(b, &summary)
+	if err != nil {
+		return output, err
+	}
+
+	for _, route := range summary.Routes {
+		if output, err = u.cli.CliCommandWithoutTerminalOutput("curl", "/v2/routes/"+route.Guid+"/apps/"+appGuid, "-X", "DELETE"); err != nil {
+			return output, err
+		}
+	}
+
+	return nil, nil
 }
