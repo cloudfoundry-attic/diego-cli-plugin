@@ -58,6 +58,13 @@ func (c *DiegoBeta) GetMetadata() plugin.PluginMetadata {
 				},
 			},
 			{
+				Name:     "get-health-check",
+				HelpText: "get health_check_type flag of an app",
+				UsageDetails: plugin.Usage{
+					Usage: "cf get-health-check APP_NAME",
+				},
+			},
+			{
 				Name:     "docker-push",
 				HelpText: "push a docker image from docker hub as an app",
 				UsageDetails: plugin.Usage{
@@ -85,6 +92,8 @@ func (c *DiegoBeta) Run(cliConnection plugin.CliConnection, args []string) {
 		c.dockerPush(cliConnection, args)
 	} else if args[0] == "set-health-check" && len(args) == 3 && (args[2] == "port" || args[2] == "none") {
 		c.setHealthCheck(cliConnection, args[1], args[2])
+	} else if args[0] == "get-health-check" && len(args) == 2 {
+		c.getHealthCheck(cliConnection, args[1])
 	} else {
 		c.showUsage(args)
 	}
@@ -198,6 +207,24 @@ func (c *DiegoBeta) setHealthCheck(cliConnection plugin.CliConnection, appName s
 		exitWithError(err, output)
 	}
 	sayOk()
+}
+
+func (c *DiegoBeta) getHealthCheck(cliConnection plugin.CliConnection, appName string) {
+	u := utils.NewUtils(cliConnection)
+
+	appGuid, err, output := u.GetAppGuid(appName)
+	if err != nil {
+		exitWithError(err, output)
+	}
+
+	fmt.Println("Getting health_check_type for " + appName)
+	healthCheckType, output, err := u.GetHealthCheck(appGuid)
+	if err != nil {
+		exitWithError(err, output)
+	}
+
+	sayOk()
+	fmt.Println("health_check_type for "+appName+":", healthCheckType)
 }
 
 func exitWithError(err error, output []string) {

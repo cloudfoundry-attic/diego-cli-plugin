@@ -1,7 +1,9 @@
 package utils
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/cloudfoundry/cli/plugin"
@@ -16,10 +18,15 @@ type Utils interface {
 	CreateRoute(string, string, string) ([]string, error)
 	MapRoute(string, string, string) ([]string, error)
 	SetHealthCheck(string, string) ([]string, error)
+	GetHealthCheck(string) (string, []string, error)
 }
 
 type utils struct {
 	cli plugin.CliConnection
+}
+
+type AppSummary struct {
+	HealthCheckType string `json:"health_check_type"`
 }
 
 func NewUtils(cli plugin.CliConnection) Utils {
@@ -101,5 +108,25 @@ func (u *utils) StartApp(appName string) ([]string, error) {
 }
 
 func (u *utils) SetHealthCheck(appGuid, value string) ([]string, error) {
-	return u.cli.CliCommandWithoutTerminalOutput("curl", "/v2/apps/"+appGuid, "-X", "PUT", "-d", `{"health_check_type":`+value+`}`)
+	return u.cli.CliCommandWithoutTerminalOutput("curl", "/v2/apps/"+appGuid, "-X", "PUT", "-d", `{"health_check_type":"`+value+`"}`)
+}
+
+func (u *utils) GetHealthCheck(appGuid string) (string, []string, error) {
+	output, err := u.cli.CliCommandWithoutTerminalOutput("curl", "/v2/apps/"+appGuid+"/summary")
+	if err != nil {
+		return "", output, err
+	}
+
+	if !strings.Contains(output[0], `"health_check_type": `) {
+		return "", output, errors.New(fmt.Sprintf("%s\nJSON:\n", "'health_check_type' flag is not found in json response"))
+	}
+
+	b := []byte(output[0])
+	summary := AppSummary{}
+	err = json.Unmarshal(b, &summary)
+	if err != nil {
+		return "", output, err
+	}
+
+	return summary.HealthCheckType, []string{}, nil
 }
