@@ -61,9 +61,10 @@ func (c *DiegoBeta) GetMetadata() plugin.PluginMetadata {
 				Name:     "docker-push",
 				HelpText: "push a docker image from docker hub as an app",
 				UsageDetails: plugin.Usage{
-					Usage: `cf docker-push APP_NAME DOCKER_IMAGE
+					Usage: `cf docker-push APP_NAME DOCKER_IMAGE [OPTIONS]
 
 Options
+-c         : Startup command, set to 'null' to reset to default start command
 --no-start : Do not start an app after pushing
 --no-route : Do not map a route to this app and remove routes from previous pushes of this app
 `,
@@ -163,17 +164,29 @@ func (c *DiegoBeta) dockerPush(cliConnection plugin.CliConnection, args []string
 	if output, err = d.CreateApp(appName, dockerImg, spaceGuid); err != nil {
 		exitWithError(err, output)
 	}
+
+	appGuid, err, output := u.GetAppGuid(appName)
+	if err != nil {
+		exitWithError(err, output)
+	}
 	sayOk()
+
+	if isFlagExist(args[3:], "-c") {
+		command := getFlagValue(args, "-c")
+		fmt.Println("Updating start command: " + command)
+		if command == "null" {
+			command = ""
+		}
+		if output, err = u.UpdateApp(appGuid, "command", command); err != nil {
+			exitWithError(err, output)
+		}
+		sayOk()
+	}
 
 	//creating route
 	var domain string
 	if isFlagExist(args[3:], "--no-route") {
 		fmt.Println("Removing app routes if any ...")
-		appGuid, err, output := u.GetAppGuid(appName)
-		if err != nil {
-			exitWithError(err, output)
-		}
-
 		if output, err = u.DetachAppRoutes(appGuid); err != nil {
 			exitWithError(err, output)
 		}
@@ -222,7 +235,7 @@ func (c *DiegoBeta) setHealthCheck(cliConnection plugin.CliConnection, appName s
 	}
 
 	fmt.Println("Setting health_check_type for " + appName + " to '" + value + "'")
-	if output, err = u.SetHealthCheck(appGuid, value); err != nil {
+	if output, err = u.UpdateApp(appGuid, "health_check_type", value); err != nil {
 		exitWithError(err, output)
 	}
 	sayOk()
@@ -262,6 +275,18 @@ func isFlagExist(args []string, flag string) bool {
 		}
 	}
 	return false
+}
+
+func getFlagValue(args []string, flag string) string {
+	for i, arg := range args {
+		if arg == flag {
+			if len(args) >= i+1 {
+				return args[i+1]
+			}
+			break
+		}
+	}
+	return ""
 }
 
 func say(message string, color uint, bold int) string {

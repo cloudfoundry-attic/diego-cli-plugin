@@ -17,9 +17,9 @@ type Utils interface {
 	StartApp(string) ([]string, error)
 	CreateRoute(string, string, string) ([]string, error)
 	MapRoute(string, string, string) ([]string, error)
-	SetHealthCheck(string, string) ([]string, error)
 	GetHealthCheck(string) (string, []string, error)
 	DetachAppRoutes(string) ([]string, error)
+	UpdateApp(string, string, string) ([]string, error)
 }
 
 type utils struct {
@@ -112,10 +112,6 @@ func (u *utils) StartApp(appName string) ([]string, error) {
 	return u.cli.CliCommand("start", appName)
 }
 
-func (u *utils) SetHealthCheck(appGuid, value string) ([]string, error) {
-	return u.cli.CliCommandWithoutTerminalOutput("curl", "/v2/apps/"+appGuid, "-X", "PUT", "-d", `{"health_check_type":"`+value+`"}`)
-}
-
 func (u *utils) GetHealthCheck(appGuid string) (string, []string, error) {
 	output, err := u.cli.CliCommandWithoutTerminalOutput("curl", "/v2/apps/"+appGuid+"/summary")
 	if err != nil {
@@ -156,4 +152,8 @@ func (u *utils) DetachAppRoutes(appGuid string) ([]string, error) {
 	}
 
 	return nil, nil
+}
+
+func (u *utils) UpdateApp(appGuid, field, value string) ([]string, error) {
+	return u.cli.CliCommandWithoutTerminalOutput("curl", "/v2/apps/"+appGuid, "-X", "PUT", "-d", `{"`+field+`":"`+value+`"}`)
 }

@@ -21,6 +21,6 @@ func NewDocker(cli plugin.CliConnection) Docker {
 	}
 }
 
-func (d *docker) CreateApp(appName string, dockerImg string, spaceGuid string) ([]string, error) {
-	return d.cli.CliCommandWithoutTerminalOutput("curl", "/v2/apps", "-X", "POST", "-d", `{"name":"`+appName+`","space_guid":"`+spaceGuid+`","docker_image":"`+dockerImg+`", "diego": true`)
+func (d *docker) CreateApp(appName, dockerImg, spaceGuid string) ([]string, error) {
+	return d.cli.CliCommandWithoutTerminalOutput("curl", "/v2/apps", "-X", "POST", "-d", `{"name":"`+appName+`","space_guid":"`+spaceGuid+`","docker_image":"`+dockerImg+`", "diego": true}`)
 }
