@@ -68,7 +68,11 @@ func (c *DiegoBeta) GetMetadata() plugin.PluginMetadata {
 				Name:     "docker-push",
 				HelpText: "push a docker image from docker hub as an app",
 				UsageDetails: plugin.Usage{
-					Usage: "cf docker-push APP_NAME DOCKER_IMAGE",
+					Usage: `cf docker-push APP_NAME DOCKER_IMAGE
+
+Options
+--no-start : Do not start an app after pushing
+`,
 				},
 			},
 		},
@@ -88,7 +92,7 @@ func (c *DiegoBeta) Run(cliConnection plugin.CliConnection, args []string) {
 		c.checkDiegoSupport(true, cliConnection, args[1])
 	} else if args[0] == "has-diego-disabled" && len(args) == 2 {
 		c.checkDiegoSupport(false, cliConnection, args[1])
-	} else if args[0] == "docker-push" && len(args) == 3 {
+	} else if args[0] == "docker-push" && len(args) >= 3 {
 		c.dockerPush(cliConnection, args)
 	} else if args[0] == "set-health-check" && len(args) == 3 && (args[2] == "port" || args[2] == "none") {
 		c.setHealthCheck(cliConnection, args[1], args[2])
@@ -188,9 +192,14 @@ func (c *DiegoBeta) dockerPush(cliConnection plugin.CliConnection, args []string
 	fmt.Println("Mapped " + appName + "." + domain + " route to " + appName)
 	sayOk()
 
-	fmt.Println("Start app", appName, "...")
-	if output, err = u.StartApp(appName); err != nil {
-		exitWithError(err, output)
+	if isFlagExist(args[3:], "--no-start") {
+		fmt.Println("Stop operation before starting '" + appName + "'")
+		sayOk()
+	} else {
+		fmt.Println("Start app", appName, "...")
+		if output, err = u.StartApp(appName); err != nil {
+			exitWithError(err, output)
+		}
 	}
 }
 
@@ -234,6 +243,15 @@ func exitWithError(err error, output []string) {
 		fmt.Println(str)
 	}
 	os.Exit(1)
+}
+
+func isFlagExist(args []string, flag string) bool {
+	for _, arg := range args {
+		if arg == flag {
+			return true
+		}
+	}
+	return false
 }
 
 func say(message string, color uint, bold int) string {
