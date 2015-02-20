@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/cloudfoundry-incubator/diego-cli-plugin/diego_support"
+	"github.com/cloudfoundry-incubator/diego-cli-plugin/docker"
+	"github.com/cloudfoundry-incubator/diego-cli-plugin/utils"
 	"github.com/cloudfoundry/cli/plugin"
-	"github.com/simonleung8/diego-beta/diego_support"
-	"github.com/simonleung8/diego-beta/docker"
-	"github.com/simonleung8/diego-beta/utils"
 )
 
 type DiegoBeta struct{}
@@ -197,7 +197,6 @@ func (c *DiegoBeta) dockerPush(cliConnection plugin.CliConnection, args []string
 		if domain, err, output = u.FindDomain(); err != nil {
 			exitWithError(err, output)
 		}
-		sayOk()
 
 		if output, err = u.CreateRoute(space, domain, appName); err != nil {
 			exitWithError(err, output)

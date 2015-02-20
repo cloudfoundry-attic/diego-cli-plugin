@@ -1,8 +1,3 @@
-// curl (make app)
-// set diego flag
-// create and map route
-// start app
-
 package docker
 
 import "github.com/cloudfoundry/cli/plugin"
