@@ -63,8 +63,12 @@ func (c *DiegoBeta) GetMetadata() plugin.PluginMetadata {
 				UsageDetails: plugin.Usage{
 					Usage: `cf docker-push APP_NAME DOCKER_IMAGE [OPTIONS]
 
+Example
+cf docker-push testapp test/docker-path -c start.sh
+cf docker-push testapp test/docker-path -c start.sh --no-start
+
 Options
--c         : Startup command, set to 'null' to reset to default start command
+-c         : Startup command, set to 'null' to reset to default start command.
 --no-start : Do not start an app after pushing
 --no-route : Do not map a route to this app and remove routes from previous pushes of this app
 `,
