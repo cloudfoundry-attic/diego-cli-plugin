@@ -17,7 +17,7 @@ func (c *DiegoBeta) GetMetadata() plugin.PluginMetadata {
 		Name: "Diego-Beta",
 		Version: plugin.VersionType{
 			Major: 1,
-			Minor: 0,
+			Minor: 1,
 			Build: 0,
 		},
 		Commands: []plugin.Command{
@@ -120,7 +120,6 @@ func (c *DiegoBeta) toggleDiegoSupport(on bool, cliConnection plugin.CliConnecti
 	if output, err = d.SetDiegoFlag(appGuid, on); err != nil {
 		exitWithError(err, output)
 	}
-
 
 	fmt.Printf("Diego support for %s is set to %t\n\n", appName, on)
 }
