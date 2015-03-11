@@ -25,9 +25,9 @@ type AppSummary struct {
 }
 
 type diegoError struct {
-	Code        int64  `json:"code;omitempty"`
-	Description string `json:"description;omitempty"`
-	ErrorCode   string `json:"error_code"`
+	Code        int64  `json:"code,omitempty"`
+	Description string `json:"description,omitempty"`
+	ErrorCode   string `json:"error_code,omitempty"`
 }
 
 func NewDiegoSupport(cli plugin.CliConnection) DiegoSupport {
