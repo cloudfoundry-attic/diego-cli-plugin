@@ -13,6 +13,7 @@ import (
 type DiegoSupport interface {
 	SetDiegoFlag(string, bool) ([]string, error)
 	HasDiegoEnabled(string) (bool, error, []string)
+	CheckDiegoError(string) error
 }
 
 type diegoSupport struct {
@@ -20,7 +21,13 @@ type diegoSupport struct {
 }
 
 type AppSummary struct {
-	Diego bool `json:"diego"`
+	Diego bool `json:"diego,omitempty"`
+}
+
+type diegoError struct {
+	Code        int64  `json:"code;omitempty"`
+	Description string `json:"description;omitempty"`
+	ErrorCode   string `json:"error_code"`
 }
 
 func NewDiegoSupport(cli plugin.CliConnection) DiegoSupport {
@@ -29,8 +36,32 @@ func NewDiegoSupport(cli plugin.CliConnection) DiegoSupport {
 	}
 }
 
+func (d *diegoSupport) CheckDiegoError(jsonRsp string) error {
+	b := []byte(jsonRsp)
+	diegoErr := diegoError{}
+	err := json.Unmarshal(b, &diegoErr)
+	if err != nil {
+		return err
+	}
+
+	if diegoErr.ErrorCode != "" || diegoErr.Code != 0 {
+		return errors.New(diegoErr.ErrorCode + " - " + diegoErr.Description)
+	}
+
+	return nil
+}
+
 func (d *diegoSupport) SetDiegoFlag(appGuid string, enable bool) ([]string, error) {
-	return d.cli.CliCommandWithoutTerminalOutput("curl", "/v2/apps/"+appGuid, "-X", "PUT", "-d", `{"diego":`+strconv.FormatBool(enable)+`}`)
+	output, err := d.cli.CliCommandWithoutTerminalOutput("curl", "/v2/apps/"+appGuid, "-X", "PUT", "-d", `{"diego":`+strconv.FormatBool(enable)+`}`)
+	if err != nil {
+		return output, err
+	}
+
+	if err = d.CheckDiegoError(output[0]); err != nil {
+		return output, err
+	}
+
+	return output, nil
 }
 
 func (d *diegoSupport) HasDiegoEnabled(appGuid string) (bool, error, []string) {

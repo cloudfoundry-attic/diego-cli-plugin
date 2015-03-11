@@ -121,6 +121,7 @@ func (c *DiegoBeta) toggleDiegoSupport(on bool, cliConnection plugin.CliConnecti
 		exitWithError(err, output)
 	}
 
+
 	fmt.Printf("Diego support for %s is set to %t\n\n", appName, on)
 }
 
