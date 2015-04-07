@@ -146,10 +146,24 @@ func (c *DiegoBeta) isDiegoEnabled(cliConnection plugin.CliConnection, appName s
 
 func (c *DiegoBeta) dockerPush(cliConnection plugin.CliConnection, args []string) {
 	var err error
-	var space, spaceGuid string
+	var space, spaceGuid, appGuid string
 	var output []string
 
 	u := utils.NewUtils(cliConnection)
+
+	appName := args[1]
+
+	appGuid, err, _ = u.GetAppGuid(appName)
+	if err == nil {
+		_, err = u.UpdateApp(appGuid, "docker_image", args[2])
+		if err != nil {
+			exitWithError(err, output)
+		}
+
+		cliConnection.CliCommand("restart", appName)
+		return
+	}
+
 	if space, err, output = u.GetTargetSpace(); err != nil {
 		exitWithError(err, output)
 	}
@@ -158,7 +172,6 @@ func (c *DiegoBeta) dockerPush(cliConnection plugin.CliConnection, args []string
 		exitWithError(err, output)
 	}
 
-	appName := args[1]
 	dockerImg := args[2]
 
 	d := docker.NewDocker(cliConnection)
@@ -169,7 +182,7 @@ func (c *DiegoBeta) dockerPush(cliConnection plugin.CliConnection, args []string
 		exitWithError(err, output)
 	}
 
-	appGuid, err, output := u.GetAppGuid(appName)
+	appGuid, err, output = u.GetAppGuid(appName)
 	if err != nil {
 		exitWithError(err, output)
 	}
