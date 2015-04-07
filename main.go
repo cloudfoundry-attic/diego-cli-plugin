@@ -160,7 +160,15 @@ func (c *DiegoBeta) dockerPush(cliConnection plugin.CliConnection, args []string
 			exitWithError(err, output)
 		}
 
-		cliConnection.CliCommand("restart", appName)
+		if !isFlagExist(args[3:], "--no-start") {
+			cliConnection.CliCommand("restart", appName)
+		}
+
+		if isFlagExist(args[3:], "-c") {
+			updateStartCommand(u, appGuid, args)
+			sayOk()
+		}
+
 		return
 	}
 
@@ -189,14 +197,7 @@ func (c *DiegoBeta) dockerPush(cliConnection plugin.CliConnection, args []string
 	sayOk()
 
 	if isFlagExist(args[3:], "-c") {
-		command := getFlagValue(args, "-c")
-		fmt.Println("Updating start command: " + command)
-		if command == "null" {
-			command = ""
-		}
-		if output, err = u.UpdateApp(appGuid, "command", command); err != nil {
-			exitWithError(err, output)
-		}
+		updateStartCommand(u, appGuid, args)
 		sayOk()
 	}
 
@@ -303,6 +304,17 @@ func getFlagValue(args []string, flag string) string {
 		}
 	}
 	return ""
+}
+
+func updateStartCommand(u utils.Utils, appGuid string, args []string) {
+	command := getFlagValue(args, "-c")
+	fmt.Println("Updating start command: " + command)
+	if command == "null" {
+		command = ""
+	}
+	if output, err := u.UpdateApp(appGuid, "command", command); err != nil {
+		exitWithError(err, output)
+	}
 }
 
 func say(message string, color uint, bold int) string {
