@@ -17,7 +17,7 @@ func (c *DiegoBeta) GetMetadata() plugin.PluginMetadata {
 		Name: "Diego-Beta",
 		Version: plugin.VersionType{
 			Major: 1,
-			Minor: 1,
+			Minor: 2,
 			Build: 0,
 		},
 		Commands: []plugin.Command{
