@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/cloudfoundry-incubator/diego-cli-plugin/diego_support"
 	"github.com/cloudfoundry-incubator/diego-cli-plugin/docker"
@@ -89,7 +90,7 @@ func (c *DiegoBeta) Run(cliConnection plugin.CliConnection, args []string) {
 		c.toggleDiegoSupport(false, cliConnection, args[1])
 	} else if args[0] == "has-diego-enabled" && len(args) == 2 {
 		c.isDiegoEnabled(cliConnection, args[1])
-	} else if args[0] == "docker-push" && len(args) >= 3 {
+	} else if args[0] == "docker-push" && len(args) >= 3 && !strings.HasPrefix(args[1], "-") && !strings.HasPrefix(args[2], "-") {
 		c.dockerPush(cliConnection, args)
 	} else if args[0] == "set-health-check" && len(args) == 3 && (args[2] == "port" || args[2] == "none") {
 		c.setHealthCheck(cliConnection, args[1], args[2])
