@@ -41,5 +41,5 @@ windows64:
 |`disable-diego`| `cf disable-diego App_Name` |disable diego for an app|
 |`has-diego-enabled`| `cf has-diego-enabled App_Name` |check if diego is enabled for an app|
 |`set-health-check`|`cf set-health-check App_Name port`|set health_check_type flag to either `port` or `none`|
-|`get-health-check`|`cf get-health-check`|get value of health_check_type flag|
+|`get-health-check`|`cf get-health-check App_Name`|get value of health_check_type flag for an app|
 |`docker-push`|`cf docker-push APP_NAME DOCKER_IMAGE [Options]`<br><br>Usage:<br>`cf docker-push test-app user/docker_path -c run.sh`|push a docker image as an app<br><br>Options:<br>`-c`: set start command<br>`--no-start`: Do not start app after push<br>`--no-route`: Do not create route for app|
