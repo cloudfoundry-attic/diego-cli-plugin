@@ -1,5 +1,8 @@
 Diego-Beta CLI Plugin
 =====================
+
+**This plugin is for CLI v6.12.4 and older. It has been replaced by [CLI v6.13.0+](https://github.com/cloudfoundry/cli/releases), which incorporates some of the commands from this plugin, and the [Diego-Enabler](https://github.com/cloudfoundry-incubator/diego-enabler) plugin, which includes the `enable-diego` and `disable-diego` commands.**
+
 This plugin enable Diego-specific features, and also allows pushing docker image. For more detail information of running apps on Diego, see [here](https://github.com/cloudfoundry-incubator/diego-design-notes/blob/master/migrating-to-diego.md)
 
 ##Installation
