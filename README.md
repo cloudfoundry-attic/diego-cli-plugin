@@ -7,12 +7,6 @@ This plugin enable Diego-specific features, and also allows pushing docker image
 
 ##Installation
 
-#####Install from Repo (v.6.10.0+)
-  ```
-  $ cf add-plugin-repo CF-Community http://plugins.cloudfoundry.org/
-  $ cf install-plugin Diego-Beta -r CF-Community
-  ```
-  
 #####Install from Url (v.6.8.0+)
 OSX
   ```
